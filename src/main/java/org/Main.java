@@ -1,16 +1,53 @@
 package org;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 
 public class Main {
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
+    static final private int threadSize = 1000;
 
     public static void main(String[] args) {
         final char letterTemplate = 'R';
 
-        for (int i = 0; i < 1000; i++) {
+        Thread summarizeThread = new Thread(() -> {
+            synchronized (sizeToFreq) {
+                while (!Thread.interrupted()) {
+                    try {
+                        sizeToFreq.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    List<Map.Entry<Integer, Integer>> sizeToFreqList = sizeToFreq
+                        .entrySet()
+                        .stream()
+                        .sorted(Map.Entry.<Integer, Integer>comparingByValue().reversed())
+                        .toList();
+
+                    int cycleSize;
+
+                    if (sizeToFreqList.size() < 5) {
+                        cycleSize = sizeToFreqList.size();
+                    } else {
+                        cycleSize = 5;
+                    }
+
+                    for (int i = 0; i < cycleSize; i++) {
+                        if (i == 0) {
+                            System.out.println("Самое частое количество повторений " + sizeToFreqList.get(i).getKey() + " (встретилось " + sizeToFreqList.get(i).getValue() + " раз)");
+                            System.out.println("Другие размеры:");
+                        } else {
+                            System.out.println("- " + sizeToFreqList.get(i).getKey() + " (" + sizeToFreqList.get(i).getValue() + " раз)");
+                        }
+                    }
+                }
+            }
+        });
+
+        summarizeThread.start();
+
+        for (int k = 0; k < threadSize; k++) {
             new Thread(() -> {
                 String route = generateRoute("RLRFR", 100);
                 List<Character> templateLetters = new ArrayList<>();
@@ -32,25 +69,13 @@ public class Main {
                         } else {
                             sizeToFreq.put(templateLetterSize, 1);
                         }
+                        sizeToFreq.notify();
                     }
                 }
             }).start();
         }
 
-        List<Map.Entry<Integer, Integer>> sizeToFreqList = sizeToFreq
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.<Integer, Integer>comparingByValue().reversed())
-            .toList();
-
-        for (int i = 0; i < 5; i++) {
-            if (i == 0) {
-                System.out.println("Самое частое количество повторений " + sizeToFreqList.get(i).getKey() + " (встретилось " + sizeToFreqList.get(i).getValue() + " раз)");
-                System.out.println("Другие размеры:");
-            } else {
-                System.out.println("- " + sizeToFreqList.get(i).getKey() + " (" + sizeToFreqList.get(i).getValue() + " раз)");
-            }
-        }
+        summarizeThread.interrupt();
     }
 
     public static String generateRoute(String letters, int length) {
