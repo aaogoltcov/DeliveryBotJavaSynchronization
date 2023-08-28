@@ -7,7 +7,7 @@ public class Main {
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
     static final private int threadSize = 1000;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         final char letterTemplate = 'R';
 
         Thread summarizeThread = new Thread(() -> {
@@ -16,7 +16,7 @@ public class Main {
                     try {
                         sizeToFreq.wait();
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        return;
                     }
 
                     List<Map.Entry<Integer, Integer>> sizeToFreqList = sizeToFreq
@@ -48,7 +48,7 @@ public class Main {
         summarizeThread.start();
 
         for (int k = 0; k < threadSize; k++) {
-            new Thread(() -> {
+            Thread freqRoute = new Thread(() -> {
                 String route = generateRoute("RLRFR", 100);
                 List<Character> templateLetters = new ArrayList<>();
 
@@ -72,7 +72,10 @@ public class Main {
                         sizeToFreq.notify();
                     }
                 }
-            }).start();
+            });
+
+            freqRoute.start();
+            freqRoute.join();
         }
 
         summarizeThread.interrupt();
