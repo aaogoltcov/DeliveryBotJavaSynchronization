@@ -9,6 +9,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
         final char letterTemplate = 'R';
+        final List<Thread> freqRoutes = new ArrayList<>();
 
         Thread summarizeThread = new Thread(() -> {
             synchronized (sizeToFreq) {
@@ -75,6 +76,10 @@ public class Main {
             });
 
             freqRoute.start();
+            freqRoutes.add(freqRoute);
+        }
+
+        for (Thread freqRoute : freqRoutes) {
             freqRoute.join();
         }
 
